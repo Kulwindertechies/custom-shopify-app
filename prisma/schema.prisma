@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model BackInStockSubscription {
+  id          String   @id @default(cuid())
+  email       String
+  productId   String
+  variantId   String?
+  shop        String
+  createdAt   DateTime @default(now())
+  notified    Boolean  @default(false)
+  notifiedAt  DateTime?
+
+  @@unique([email, productId, variantId, shop])
+  @@index([shop, productId])
+  @@index([shop, notified])
+}
+
+model BackInStockSettings {
+  id                String  @id @default(cuid())
+  shop              String  @unique
+  enabled           Boolean @default(true)
+  emailSubject      String  @default("Good news! {{product_title}} is back in stock")
+  emailTemplate     String  @default("Hi there!\n\nGreat news! The product you were waiting for is now back in stock:\n\n{{product_title}}\n{{product_url}}\n\nDon't wait too long - get yours now!\n\nBest regards,\n{{shop_name}}")
+  buttonText        String  @default("Notify Me When Available")
+  successMessage    String  @default("Thanks! We'll notify you when this product is back in stock.")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model BackInStockNotification {
+  id              String   @id @default(cuid())
+  subscriptionId  String
+  email           String
+  productId       String
+  variantId       String?
+  shop            String
+  sentAt          DateTime @default(now())
+  status          String   @default("sent") // sent, failed, bounced
+  
+  @@index([shop, sentAt])
+  @@index([productId, sentAt])
+}
