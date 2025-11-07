@@ -5,11 +5,12 @@ name = "stockpilot"
 application_url = "https://example.com"
 embedded = true
 
-[build]
-automatically_update_urls_on_dev = true
-
 [webhooks]
 api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "products/update" ]
+  uri = "/webhooks/products/update"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
@@ -23,18 +24,17 @@ api_version = "2026-01"
   topics = [ "inventory_levels/update" ]
   uri = "/webhooks/inventory/update"
 
-  [[webhooks.subscriptions]]
-  topics = [ "products/update" ]
-  uri = "/webhooks/products/update"
-
-[app_proxy]
-url = "/apps/stockpilot"
-subpath = "api"
-prefix = "apps"
-
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_customers,read_inventory,write_customers,write_products"
 
 [auth]
 redirect_urls = [ "https://example.com/api/auth" ]
+
+[app_proxy]
+url = "https://example.com/apps/stockpilot"
+subpath = "api"
+prefix = "apps"
+
+[build]
+automatically_update_urls_on_dev = true

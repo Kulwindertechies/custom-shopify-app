@@ -1,13 +1,10 @@
 {% comment %}
   Back in Stock Notification Block
-  This block displays a form for customers to subscribe to back-in-stock notifications
 {% endcomment %}
 
 {% liquid
   assign product = block.settings.product | default: product
   assign show_for_all_variants = block.settings.show_for_all_variants
-  assign button_style = block.settings.button_style
-  assign form_style = block.settings.form_style
 %}
 
 <div class="back-in-stock-wrapper" data-product-id="{{ product.id }}" data-shop="{{ shop.permanent_domain }}">
@@ -15,84 +12,19 @@
     .back-in-stock-wrapper {
       margin: {{ block.settings.margin_top }}px 0 {{ block.settings.margin_bottom }}px 0;
     }
-
-    .back-in-stock-form {
-      display: none;
-      padding: 16px;
-      border: 1px solid #e1e3e5;
-      border-radius: 8px;
-      background: #f9fafb;
-      margin-top: 12px;
-    }
-
-    .back-in-stock-form.show {
-      display: block;
-    }
-
-    .back-in-stock-input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
-      margin-bottom: 12px;
-    }
-
-    .back-in-stock-submit {
+    .back-in-stock-form { display:none; padding:16px; border:1px solid #e1e3e5; border-radius:8px; background:#f9fafb; margin-top:12px; }
+    .back-in-stock-form.show { display:block; }
+    .back-in-stock-input { width:100%; padding:12px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; margin-bottom:12px; }
+    .back-in-stock-submit, .back-in-stock-trigger {
       background: {{ block.settings.button_color | default: '#000000' }};
       color: {{ block.settings.button_text_color | default: '#ffffff' }};
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      width: 100%;
+      border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; width: 100%;
     }
-
-    .back-in-stock-submit:hover {
-      opacity: 0.9;
-    }
-
-    .back-in-stock-submit:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .back-in-stock-trigger {
-      background: {{ block.settings.button_color | default: '#000000' }};
-      color: {{ block.settings.button_text_color | default: '#ffffff' }};
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      width: 100%;
-    }
-
-    .back-in-stock-trigger:hover {
-      opacity: 0.9;
-    }
-
-    .back-in-stock-message {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    .back-in-stock-message.success {
-      background: #d1fae5;
-      color: #065f46;
-      border: 1px solid #a7f3d0;
-    }
-
-    .back-in-stock-message.error {
-      background: #fee2e2;
-      color: #991b1b;
-      border: 1px solid #fca5a5;
-    }
+    .back-in-stock-submit:hover, .back-in-stock-trigger:hover { opacity:0.9; }
+    .back-in-stock-submit:disabled { opacity:0.6; cursor:not-allowed; }
+    .back-in-stock-message { margin-top:12px; padding:12px; border-radius:6px; font-size:14px; display:none; }
+    .back-in-stock-message.success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
+    .back-in-stock-message.error { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
   </style>
 
   <div class="back-in-stock-content">
@@ -115,7 +47,7 @@
       </form>
     </div>
 
-    <div class="back-in-stock-message" id="back-in-stock-message-{{ product.id }}" style="display: none;"></div>
+    <div class="back-in-stock-message" id="back-in-stock-message-{{ product.id }}"></div>
   </div>
 </div>
 
@@ -127,227 +59,153 @@
     const form = document.getElementById('back-in-stock-form-' + productId);
     const messageDiv = document.getElementById('back-in-stock-message-' + productId);
     const subscriptionForm = form.querySelector('.back-in-stock-subscription-form');
+    const paymentButton = document.querySelector('.shopify-payment-button'); // target Buy Now button
 
-    // Check if product is out of stock
-    function checkInventory() {
-      {% if show_for_all_variants %}
-        // Check if any variant is available
-        const variants = {{ product.variants | json }};
-        const hasAvailableVariant = variants.some(variant => variant.available);
-        return !hasAvailableVariant;
-      {% else %}
-        // Check current selected variant
-        const currentVariant = window.currentVariant || {{ product.selected_or_first_available_variant | json }};
-        return currentVariant && !currentVariant.available;
-      {% endif %}
+    /* === Get current variant ID === */
+    function getCurrentVariantId() {
+      let variantId = {{ product.selected_or_first_available_variant.id | default: 'null' }};
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlVariantId = urlParams.get('variant');
+      if (urlVariantId) return parseInt(urlVariantId);
+      if (window.currentVariant && window.currentVariant.id) return window.currentVariant.id;
+
+      const checkedInput = document.querySelector('input[name="id"]:checked');
+      if (checkedInput) return parseInt(checkedInput.value);
+
+      const select = document.querySelector('select[name="id"]');
+      if (select && select.value) return parseInt(select.value);
+
+      const hiddenInput = document.querySelector('input[type="hidden"][name="id"]');
+      if (hiddenInput && hiddenInput.value) return parseInt(hiddenInput.value);
+
+      return variantId;
     }
 
-    // Show/hide the back in stock form based on inventory
-    function updateVisibility() {
-      const isOutOfStock = checkInventory();
+    /* === Get variant data by ID === */
+    function getVariantData(variantId) {
+      const variants = {{ product.variants | json }};
+      return variants.find(v => v.id === variantId);
+    }
+
+    /* === Update payment button visibility === */
+    function updatePaymentButton() {
+      const variantId = getCurrentVariantId();
+      const variant = getVariantData(variantId);
+      const isOutOfStock = variant ? !variant.available : false;
+
+      if (paymentButton) {
+        paymentButton.style.display = isOutOfStock ? 'none' : 'block';
+      }
+    }
+
+    /* === Update Back in Stock visibility === */
+    function updateBackInStockForm() {
       const wrapper = document.querySelector('.back-in-stock-wrapper[data-product-id="' + productId + '"]');
+      const variantId = getCurrentVariantId();
+      const variant = getVariantData(variantId);
+      const isOutOfStock = variant ? !variant.available : false;
 
       if (wrapper) {
         wrapper.style.display = isOutOfStock ? 'block' : 'none';
       }
+
+      const variantSpan = document.getElementById('current-variant-id-' + productId);
+      if (variantSpan) variantSpan.textContent = variantId;
     }
 
-    // Show message
-    function showMessage(message, type) {
-      messageDiv.textContent = message;
+    /* === Combine updates === */
+    function handleVariantChange() {
+      updateBackInStockForm();
+      updatePaymentButton();
+    }
+
+    /* === Event: toggle form === */
+    trigger?.addEventListener('click', () => {
+      form.classList.toggle('show');
+      trigger.style.display = form.classList.contains('show') ? 'none' : 'block';
+    });
+
+    /* === Event: form submit === */
+    subscriptionForm?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const email = this.querySelector('input[name="email"]').value;
+      const submitBtn = this.querySelector('.back-in-stock-submit');
+      if (!email) return showMessage('Please enter a valid email', 'error');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Subscribing...';
+
+      await new Promise(r => setTimeout(r, 100));
+
+      const variantId = getCurrentVariantId();
+      try {
+        const payload = {
+          email: email,
+          productId: productId.toString(),
+          variantId: variantId ? variantId.toString() : null,
+          shop: shop
+        };
+        const response = await fetch('https://45fbbb4ba584.ngrok-free.app/api/subscription', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          showMessage(data.message || 'Subscribed successfully!', 'success');
+          form.classList.remove('show');
+          trigger.style.display = 'block'; 
+          subscriptionForm.reset();
+        } else {
+          showMessage(data.error || 'Something went wrong', 'error');
+        } 
+      } catch {
+        showMessage('Something went wrong. Try again.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '{{ block.settings.submit_text | default: "Notify Me" }}';
+      }
+    });
+
+    /* === Show message helper === */
+    function showMessage(msg, type) {
+      messageDiv.textContent = msg;
       messageDiv.className = 'back-in-stock-message ' + type;
       messageDiv.style.display = 'block';
-
-      setTimeout(() => {
-        messageDiv.style.display = 'none';
-      }, 5000);
+      setTimeout(() => { messageDiv.style.display = 'none'; }, 5000);
     }
 
-    // Handle trigger click
-    if (trigger) {
-      trigger.addEventListener('click', function() {
-        form.classList.toggle('show');
-        trigger.style.display = form.classList.contains('show') ? 'none' : 'block';
-      });
-    }
-
-    // Handle form submission
-    if (subscriptionForm) {
-      subscriptionForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-
-        const email = this.querySelector('input[name="email"]').value;
-        const submitBtn = this.querySelector('.back-in-stock-submit');
-
-        if (!email) {
-          showMessage('Please enter a valid email address', 'error');
-          return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Subscribing...';
-
-        // Small delay to ensure theme has updated variant selection
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        try {
-          // Get current variant ID (fresh query each time)
-          let variantId = null;
-
-          {% unless show_for_all_variants %}
-            // Try all methods and use the most reliable one based on what's actually changing
-            
-            // Check all possible sources and log them
-            const hiddenVariantInput = document.querySelector('input[type="hidden"][name="id"]');
-            const checkedVariantInput = document.querySelector('input[name="id"]:checked');
-            const variantSelect = document.querySelector('select[name="id"]');
-            
-            // Also check URL for variant parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlVariantId = urlParams.get('variant');
-            
-            console.log('=== CHECKING ALL VARIANT SOURCES ===');
-            console.log('URL variant parameter:', urlVariantId);
-            console.log('Hidden input value:', hiddenVariantInput ? hiddenVariantInput.value : 'not found');
-            console.log('Checked input value:', checkedVariantInput ? checkedVariantInput.value : 'not found');
-            console.log('Select value:', variantSelect ? variantSelect.value : 'not found');
-            console.log('window.currentVariant:', window.currentVariant);
-            
-            // Priority order - URL first since it's most reliable for variant changes
-            if (urlVariantId) {
-              variantId = parseInt(urlVariantId);
-              console.log('✅ Using URL variant ID:', variantId);
-            }
-            else if (window.currentVariant && window.currentVariant.id) {
-              variantId = window.currentVariant.id;
-              console.log('✅ Using window.currentVariant ID:', variantId);
-            }
-            else if (checkedVariantInput && checkedVariantInput.value) {
-              variantId = parseInt(checkedVariantInput.value);
-              console.log('✅ Using checked input variant ID:', variantId);
-            }
-            else if (variantSelect && variantSelect.value) {
-              variantId = parseInt(variantSelect.value);
-              console.log('✅ Using select variant ID:', variantId);
-            }
-            else if (hiddenVariantInput && hiddenVariantInput.value) {
-              variantId = parseInt(hiddenVariantInput.value);
-              console.log('✅ Using hidden input variant ID:', variantId);
-            }
-            else {
-              const liquidVariant = {{ product.selected_or_first_available_variant | json }};
-              if (liquidVariant && liquidVariant.id) {
-                variantId = liquidVariant.id;
-                console.log('✅ Using Liquid fallback variant ID:', variantId);
-              }
-            }
-          {% else %}
-            // For all variants mode, we don't need a specific variant ID
-            variantId = null;
-          {% endunless %}
-
-          // Comprehensive debugging - let's see what's actually on the page
-          console.log('=== VARIANT ID DEBUG (AT SUBMISSION TIME) ===');
-          console.log('Final variantId:', variantId);
-          console.log('window.currentVariant:', window.currentVariant);
-          console.log('Liquid selected_or_first_available_variant:', {{ product.selected_or_first_available_variant | json }});
-
-          // Debug all hidden inputs with their current values
-          const allHiddenInputs = document.querySelectorAll('input[type="hidden"]');
-          console.log('All hidden inputs with current values:');
-          allHiddenInputs.forEach((input, index) => {
-            console.log(`Hidden input ${index}:`, {
-              name: input.name,
-              value: input.value,
-              id: input.id,
-              element: input
-            });
-          });
-
-          // Debug all inputs with name="id" and their current values
-          const allIdInputs = document.querySelectorAll('input[name="id"]');
-          console.log('All inputs with name="id" and current values:');
-          allIdInputs.forEach((input, index) => {
-            console.log(`Input ${index}:`, {
-              type: input.type,
-              value: input.value,
-              checked: input.checked,
-              element: input
-            });
-          });
-
-          // Let's also try to get it directly from Liquid as a fallback
-          if (!variantId) {
-            variantId = {{ product.selected_or_first_available_variant.id | default: 'null' }};
-            console.log('Using Liquid fallback variant ID:', variantId);
-          }
-
-          // Final check - log exactly what we're sending to the API
-          console.log('🔍 FINAL VARIANT ID CHECK:');
-          console.log('variantId variable value:', variantId);
-          console.log('variantId type:', typeof variantId);
-          console.log('variantId as string:', variantId ? variantId.toString() : null);
-          
-          // Create a copy to ensure it's not being modified
-          const finalVariantId = variantId;
-          console.log('🔒 LOCKED variant ID:', finalVariantId);
-          
-          const apiPayload = {
-            email: email,
-            productId: productId.toString(),
-            variantId: finalVariantId ? finalVariantId.toString() : null,
-            shop: shop
-          };
-          
-          console.log('🚀 SENDING TO API:', apiPayload);
-          console.log('🚀 API PAYLOAD JSON:', JSON.stringify(apiPayload));
-          
-          const response = await fetch('https://d92082333462.ngrok-free.app/api/subscription', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(apiPayload)
-          });
-
-          const data = await response.json();
-          
-          console.log('📥 API RESPONSE:', data);
-          console.log('📥 Response status:', response.status);
-
-          if (data.success) {
-            showMessage(data.message, 'success');
-            form.classList.remove('show');
-            trigger.style.display = 'block';
-            subscriptionForm.reset();
-          } else {
-            showMessage(data.error || 'Something went wrong. Please try again.', 'error');
-          }
-        } catch (error) {
-          console.error('Error subscribing:', error);
-          showMessage('Something went wrong. Please try again.', 'error');
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = '{{ block.settings.submit_text | default: "Notify Me" }}';
-        }
-      });
-    }
-
-    // Initial visibility check
-    updateVisibility();
-
-    // Listen for variant changes (if applicable)
-    document.addEventListener('variant:change', updateVisibility);
-
-    // Fallback: check periodically for variant changes
-    let lastVariant = null;
-    setInterval(() => {
-      const currentVariant = window.currentVariant;
-      if (currentVariant && currentVariant !== lastVariant) {
-        lastVariant = currentVariant;
-        updateVisibility();
+    /* === Variant change listeners === */
+    document.addEventListener('variant:change', handleVariantChange);
+    document.addEventListener('variantChange', handleVariantChange);
+    document.addEventListener('change', e => {
+      if (e.target.name === 'id' || e.target.matches('select[name="id"], input[name="id"]')) {
+        setTimeout(handleVariantChange, 100);
       }
-    }, 1000);
+    });
+
+    /* === Watch for URL change (Shopify themes often change ?variant=) === */
+    let lastUrl = window.location.href;
+    setInterval(() => {
+      if (window.location.href !== lastUrl) {
+        lastUrl = window.location.href;
+        handleVariantChange();
+      }
+    }, 500);
+
+    /* === Watch for window.currentVariant change (Dawn theme etc.) === */
+    let lastVariantId = null;
+    setInterval(() => {
+      const cv = window.currentVariant;
+      if (cv && cv.id !== lastVariantId) {
+        lastVariantId = cv.id;
+        handleVariantChange();
+      }
+    }, 500);
+
+    /* === Initialize === */
+    handleVariantChange();
   })();
 </script>
 
