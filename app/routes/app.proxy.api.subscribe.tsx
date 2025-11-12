@@ -11,11 +11,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     const body = await request.json();
-    const { email, productId, variantId, shop } = body;
+    const { email, productId, variantId, quantity, shop } = body;
 
     // Basic validation
     if (!email || !productId || !shop) {
       return json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Validate quantity
+    const parsedQuantity = quantity ? parseInt(quantity) : 1;
+    if (parsedQuantity < 1) {
+      return json({ error: "Quantity must be at least 1" }, { status: 400 });
     }
 
     // Validate email format
@@ -70,6 +76,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         email,
         productId,
         variantId: variantId || null,
+        quantity: parsedQuantity,
         shop,
       },
     });

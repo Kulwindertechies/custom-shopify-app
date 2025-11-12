@@ -36,6 +36,7 @@ model BackInStockSubscription {
   email       String
   productId   String
   variantId   String?
+  quantity    Int      @default(1)
   shop        String
   createdAt   DateTime @default(now())
   notified    Boolean  @default(false)

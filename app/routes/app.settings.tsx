@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useNavigation, Form } from "@remix-run/react";
 import {
   Page,
@@ -32,7 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   }
 
-  return json({ settings });
+  return { settings };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -56,9 +55,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     });
 
-    return json({ success: true, message: "Settings updated successfully!" });
+    return { success: true, message: "Settings updated successfully!" };
   } catch (error) {
-    return json({ success: false, message: "Failed to update settings" });
+    return { success: false, message: "Failed to update settings" };
   }
 };
 

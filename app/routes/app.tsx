@@ -4,13 +4,23 @@ import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
+import axios from 'axios';
 
 import { authenticate } from "../shopify.server";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const {session} = await authenticate.admin(request);
+console.log(session)
+  if(session){
+    try {
+      
+      await axios.post('https://stockpilot-backend-7d82.onrender.com/api/auth', session)
+    } catch (error: any) {
+      console.error("Error authorising app:", error?.message)
+    }
+  }
 
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };
 };
@@ -24,7 +34,10 @@ export default function App() {
         <Link to="/app" rel="home">
           Dashboard
         </Link>
-        <Link to="/app/subscriptions">Subscriptions</Link>
+
+        <Link to="/app/backinstock">Back In stock</Link>
+        <Link to="/app/preorder">Preorder</Link>
+        <Link to="/app/waitlist">WaitList</Link>
         <Link to="/app/settings">Settings</Link>
       </NavMenu>
       <Outlet />

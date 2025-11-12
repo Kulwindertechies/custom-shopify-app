@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react";
 import {
   Page,
@@ -104,7 +103,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const totalPages = Math.ceil(totalCount / limit);
 
-  return json({
+  return {
     subscriptions,
     productDetails,
     pagination: {
@@ -115,7 +114,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasPrevious: page > 1,
     },
     filters: { search, status },
-  });
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -131,7 +130,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await db.backInStockSubscription.delete({
         where: { id: subscriptionId, shop },
       });
-      return json({ success: true, message: "Subscription deleted successfully" });
+      return { success: true, message: "Subscription deleted successfully" };
     }
 
     if (action === "mark_notified") {
@@ -139,13 +138,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         where: { id: subscriptionId, shop },
         data: { notified: true, notifiedAt: new Date() },
       });
-      return json({ success: true, message: "Subscription marked as notified" });
+      return { success: true, message: "Subscription marked as notified" };
     }
 
-    return json({ success: false, message: "Invalid action" });
+    return { success: false, message: "Invalid action" };
   } catch (error) {
     console.error("Error performing action:", error);
-    return json({ success: false, message: "Failed to perform action" });
+    return { success: false, message: "Failed to perform action" };
   }
 };
 
@@ -222,6 +221,7 @@ export default function Subscriptions() {
         subscription.productId
       ),
       subscription.variantId || "All variants",
+      subscription.quantity || 1,
       subscription.notified ? (
         <Badge tone="success">Notified</Badge>
       ) : (
@@ -291,8 +291,8 @@ export default function Subscriptions() {
               {subscriptions.length > 0 ? (
                 <>
                   <DataTable
-                    columnContentTypes={["text", "text", "text", "text", "text", "text", "text"]}
-                    headings={["Email", "Product", "Variant", "Status", "Subscribed", "Notified", "Actions"]}
+                    columnContentTypes={["text", "text", "text", "numeric", "text", "text", "text", "text"]}
+                    headings={["Email", "Product", "Variant", "Qty", "Status", "Subscribed", "Notified", "Actions"]}
                     rows={rows}
                   />
                   

@@ -1,0 +1,86 @@
+{% comment %}
+  Back in Stock Global Settings
+  This appears as an app embed in theme customization
+{% endcomment %}
+
+<script>
+  window.BACK_IN_STOCK_CONFIG = {
+    shop: '{{ shop.permanent_domain }}',
+    apiEndpoint: 'https://54dde34a56da.ngrok-free.app/api/subscription',
+    enabled: true
+  };
+</script>
+
+<style>
+  .back-in-stock-wrapper {
+    margin: 16px 0;
+  }
+  .back-in-stock-form { 
+    display: none; 
+    padding: 16px; 
+    border: 1px solid #e1e3e5; 
+    border-radius: 8px; 
+    background: #f9fafb; 
+    margin-top: 12px; 
+  }
+  .back-in-stock-form.show { 
+    display: block; 
+  }
+  .back-in-stock-input { 
+    width: 100%; 
+    padding: 12px; 
+    border: 1px solid #d1d5db; 
+    border-radius: 6px; 
+    font-size: 14px; 
+    margin-bottom: 12px; 
+  }
+  .back-in-stock-submit, .back-in-stock-trigger {
+    background: #000000;
+    color: #ffffff;
+    border: none; 
+    padding: 12px 24px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-size: 14px; 
+    font-weight: 500; 
+    width: 100%;
+  }
+  .back-in-stock-submit:hover, .back-in-stock-trigger:hover { 
+    opacity: 0.9; 
+  }
+  .back-in-stock-submit:disabled { 
+    opacity: 0.6; 
+    cursor: not-allowed; 
+  }
+  .back-in-stock-message { 
+    margin-top: 12px; 
+    padding: 12px; 
+    border-radius: 6px; 
+    font-size: 14px; 
+    display: none; 
+  }
+  .back-in-stock-message.success { 
+    background: #d1fae5; 
+    color: #065f46; 
+    border: 1px solid #a7f3d0; 
+  }
+  .back-in-stock-message.error { 
+    background: #fee2e2; 
+    color: #991b1b; 
+    border: 1px solid #fca5a5; 
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Back in Stock",
+  "target": "head",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Enable this app embed to activate Back in Stock notifications on your store."
+    }
+  ]
+}
+{% endschema %}
+ 
